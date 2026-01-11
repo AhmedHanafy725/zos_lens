@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@threefold/grid_client": "^2.9.2",
+    "@threefold/gridproxy_client": "^2.9.2",
     "@threefold/rmb_direct_client": "^2.9.2",
     "pinia": "^3.0.4",
     "vue": "^3.5.26",

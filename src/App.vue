@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import NetworkSelector from '@/components/NetworkSelector.vue'
+import { onMounted } from 'vue'
+import { rmbService } from '@/services/rmbService'
+
+onMounted(async () => {
+  await rmbService.initialize()
+})
 </script>
 
 <template>
@@ -11,7 +18,14 @@ import { RouterView } from 'vue-router'
     </header>
     
     <main class="app-main">
-      <RouterView />
+      <div class="main-content">
+        <div class="sidebar">
+          <NetworkSelector />
+        </div>
+        <div class="content">
+          <RouterView />
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -50,5 +64,36 @@ import { RouterView } from 'vue-router'
 .app-main {
   flex: 1;
   overflow: hidden;
+}
+
+.main-content {
+  height: 100%;
+  display: flex;
+}
+
+.sidebar {
+  width: 350px;
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  padding: 1rem;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 50vh;
+  }
 }
 </style>
