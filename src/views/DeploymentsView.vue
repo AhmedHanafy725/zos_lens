@@ -1,0 +1,275 @@
+<template>
+  <div class="deployments-view">
+    <div class="view-header">
+      <h2>Deployments</h2>
+      <button @click="refreshDeployments" class="refresh-btn" :disabled="loading">
+        <span v-if="loading">Loading...</span>
+        <span v-else>Refresh</span>
+      </button>
+    </div>
+
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div v-if="deployments.length === 0 && !loading && !error" class="empty-state">
+      No deployments found
+    </div>
+
+    <div v-else class="deployments-grid">
+      <div
+        v-for="deployment in deployments"
+        :key="`${deployment.twin_id}-${deployment.contract_id}`"
+        class="deployment-card"
+        @click="navigateToDeployment(deployment)"
+      >
+        <div class="deployment-header">
+          <div class="deployment-id">
+            <span class="label">Twin ID:</span>
+            <span class="value">{{ deployment.twin_id }}</span>
+          </div>
+          <div class="deployment-id">
+            <span class="label">Contract ID:</span>
+            <span class="value">{{ deployment.contract_id }}</span>
+          </div>
+        </div>
+
+        <div class="deployment-workloads">
+          <div class="workloads-header">
+            <span class="workload-count">{{ deployment.workloads.length }} workload(s)</span>
+          </div>
+          <div class="workload-list">
+            <div
+              v-for="workload in deployment.workloads"
+              :key="workload.name"
+              class="workload-item"
+              :class="workload.state"
+            >
+              <div class="workload-type">{{ workload.type.toUpperCase() }}</div>
+              <div class="workload-name">{{ workload.name }}</div>
+              <div class="workload-state">
+                <span class="status-indicator" :class="workload.state"></span>
+                {{ workload.state }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { rmbService } from '@/services/rmbService';
+import type { Deployment } from '@/types/deployment';
+
+const router = useRouter();
+const deployments = ref<Deployment[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+
+const loadDeployments = async () => {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const response = await rmbService.listDeployments();
+    deployments.value = response.deployments;
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to load deployments';
+    console.error('Error loading deployments:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const refreshDeployments = () => {
+  loadDeployments();
+};
+
+const navigateToDeployment = (deployment: Deployment) => {
+  router.push({
+    name: 'deployment-detail',
+    params: {
+      twinId: deployment.twin_id.toString(),
+      contractId: deployment.contract_id.toString()
+    }
+  });
+};
+
+onMounted(() => {
+  loadDeployments();
+});
+</script>
+
+<style scoped>
+.deployments-view {
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.view-header h2 {
+  color: var(--color-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.refresh-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: var(--color-error);
+  color: white;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--color-text);
+  padding: 3rem;
+  font-size: 1.1rem;
+}
+
+.deployments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1rem;
+}
+
+.deployment-card {
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deployment-card:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.deployment-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deployment-id {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.workloads-header {
+  margin-bottom: 0.5rem;
+}
+
+.workload-count {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.workload-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.workload-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--color-background-mute);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.workload-type {
+  background: var(--color-secondary);
+  color: var(--color-text);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.workload-name {
+  flex: 1;
+  color: var(--color-text);
+}
+
+.workload-state {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.ok {
+  background: var(--color-success);
+}
+
+.status-indicator.failed {
+  background: var(--color-error);
+}
+
+.status-indicator.degraded {
+  background: var(--color-warning);
+}
+</style>
