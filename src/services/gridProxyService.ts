@@ -64,8 +64,20 @@ class GridProxyService {
         page: filters?.page || 1,
         size: filters?.size || 50,
       });
-      // GridProxy returns paginated data
-      return (response as unknown as Node[]) || [];
+      
+      // GridProxy returns paginated data with structure { data: [...], count: number }
+      // Check if response has a data property (paginated response)
+      if (response && typeof response === 'object' && 'data' in response) {
+        return (response.data as Node[]) || [];
+      }
+      
+      // Fallback: if it's already an array
+      if (Array.isArray(response)) {
+        return response as Node[];
+      }
+      
+      // Default: empty array
+      return [];
     } catch (error) {
       console.error('Failed to fetch nodes:', error);
       throw error;
@@ -97,8 +109,17 @@ class GridProxyService {
         page: filters?.page || 1,
         size: filters?.size || 50,
       });
-      // GridProxy returns paginated data
-      return (response as unknown as Farm[]) || [];
+      
+      // GridProxy returns paginated data with structure { data: [...], count: number }
+      if (response && typeof response === 'object' && 'data' in response) {
+        return (response.data as unknown as Farm[]) || [];
+      }
+      
+      if (Array.isArray(response)) {
+        return response as unknown as Farm[];
+      }
+      
+      return [];
     } catch (error) {
       console.error('Failed to fetch farms:', error);
       throw error;
@@ -108,13 +129,19 @@ class GridProxyService {
   async getFarmById(farmId: number): Promise<Farm | null> {
     try {
       const client = this.getClient();
-      // Use list with farmId filter since byId might not exist
       const response = await client.farms.list({
         farmId,
         page: 1,
         size: 1,
       });
-      const farms = response as unknown as Farm[];
+      
+      let farms: Farm[] = [];
+      if (response && typeof response === 'object' && 'data' in response) {
+        farms = (response.data as unknown as Farm[]) || [];
+      } else if (Array.isArray(response)) {
+        farms = response as unknown as Farm[];
+      }
+      
       return farms && farms.length > 0 ? farms[0]! : null;
     } catch (error) {
       console.error(`Failed to fetch farm ${farmId}:`, error);
@@ -130,10 +157,20 @@ class GridProxyService {
         page: 1,
         size: 100,
       });
-      return (response as unknown as Node[]) || [];
+      
+      // GridProxy returns paginated data with structure { data: [...], count: number }
+      if (response && typeof response === 'object' && 'data' in response) {
+        return (response.data as Node[]) || [];
+      }
+      
+      if (Array.isArray(response)) {
+        return response as Node[];
+      }
+      
+      return [];
     } catch (error) {
       console.error(`Failed to fetch nodes for farm ${farmId}:`, error);
-      return [];
+      throw error;
     }
   }
 }

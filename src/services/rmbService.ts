@@ -1,5 +1,6 @@
 import type { DeploymentListResponse, DeploymentDetailResponse, Deployment, Workload } from '@/types/deployment';
 import { networkConfigService } from './networkConfig';
+import { gridClientService } from './gridClientService';
 
 interface GridProxyDeployment {
   twinId: number;
@@ -8,33 +9,6 @@ interface GridProxyDeployment {
     type: string;
     name: string;
     state?: string;
-  }>;
-}
-
-interface GridProxyDeploymentDetail {
-  version?: number;
-  twinId: number;
-  contractId: number;
-  metadata?: Record<string, unknown>;
-  description?: string;
-  expiration?: number;
-  signatureRequirement?: {
-    requests: Array<{ twin_id: number; required: boolean; weight: number }>;
-    weight_required: number;
-    signatures: Array<{ twin_id: number; signature: string; signature_type: string }>;
-    signature_style: string;
-  };
-  workloads?: Array<{
-    version?: number;
-    name?: string;
-    type?: string;
-    data?: Record<string, unknown>;
-    metadata?: Record<string, unknown>;
-    description?: string;
-    created?: number;
-    state?: string;
-    message?: string;
-    resultData?: unknown;
   }>;
 }
 
@@ -52,7 +26,8 @@ function castWorkloadState(state: string): Workload['state'] {
 
 class RMBService {
   private selectedNodeId: number | null = null;
-  private useMockData: boolean = false; // Default to real data
+  private useMockData: boolean = false;
+  private mnemonic: string = '';
 
   async initialize() {
     try {
@@ -63,16 +38,53 @@ class RMBService {
         this.useMockData = false;
       }
       
+      // Load mnemonic from storage
+      const storedMnemonic = localStorage.getItem('zos_lens_mnemonic');
+      if (storedMnemonic) {
+        this.mnemonic = storedMnemonic;
+        
+        // Initialize GridClient if we have a mnemonic
+        try {
+          await gridClientService.initialize(this.mnemonic);
+        } catch (error) {
+          console.error('Failed to initialize GridClient:', error);
+        }
+      }
+      
       console.log('RMB service initialized');
-      if (this.useMockData) {
-        console.log('Using mock data. Select a node to fetch real deployment data.');
+      if (!this.mnemonic) {
+        console.log('No mnemonic provided. Please configure mnemonic to make RMB calls.');
+      } else if (!this.selectedNodeId) {
+        console.log('No node selected. Please select a node to fetch deployments.');
       } else {
-        console.log('Fetching real deployment data from ThreeFold network');
+        console.log('Ready to fetch deployment data from node', this.selectedNodeId);
       }
     } catch (error) {
       console.error('Failed to initialize RMB service:', error);
       throw error;
     }
+  }
+
+  setMnemonic(mnemonic: string) {
+    this.mnemonic = mnemonic;
+    if (mnemonic) {
+      localStorage.setItem('zos_lens_mnemonic', mnemonic);
+      // Reinitialize GridClient with new mnemonic
+      gridClientService.initialize(mnemonic).catch(error => {
+        console.error('Failed to initialize GridClient with new mnemonic:', error);
+      });
+    } else {
+      localStorage.removeItem('zos_lens_mnemonic');
+      gridClientService.disconnect();
+    }
+  }
+
+  getMnemonic(): string {
+    return this.mnemonic;
+  }
+
+  hasMnemonic(): boolean {
+    return this.mnemonic.length > 0;
   }
 
   setSelectedNode(nodeId: number | null) {
@@ -92,89 +104,54 @@ class RMBService {
 
   async listDeployments(): Promise<DeploymentListResponse> {
     try {
-      // Always try to get real data first
-      const config = networkConfigService.getCurrentConfig();
-      
-      // Fetch deployments from GridProxy
-      const response = await fetch(`${config.gridProxyUrl}/deployments`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch deployments: ${response.statusText}`);
+      // Check if we have mnemonic and selected node
+      if (!this.mnemonic) {
+        throw new Error('Mnemonic is required to fetch deployments');
       }
 
-      const data = await response.json() as GridProxyDeployment[];
-      
-      // Transform the data to match our expected format
-      const deployments: Deployment[] = data.map((dep: GridProxyDeployment): Deployment => ({
-        twin_id: dep.twinId,
-        contract_id: dep.contractId,
-        workloads: dep.workloads.map((w): Workload => ({
-          type: castWorkloadType(w.type),
-          name: w.name,
-          state: castWorkloadState(w.state || 'unknown')
-        }))
-      }));
+      if (!this.selectedNodeId) {
+        throw new Error('No node selected. Please select a node first.');
+      }
 
-      return { deployments };
+      // Use GridClient to make RMB call
+      if (gridClientService.isClientConnected()) {
+        const result = await gridClientService.getNodeDeployments(this.selectedNodeId);
+        return result;
+      } else {
+        // Try to initialize GridClient if not connected
+        await gridClientService.initialize(this.mnemonic);
+        const result = await gridClientService.getNodeDeployments(this.selectedNodeId);
+        return result;
+      }
     } catch (error) {
-      console.error('Failed to fetch real deployments:', error);
-      
-      // Return empty result instead of mock data for real mode
-      if (!this.useMockData) {
-        return { deployments: [] };
-      }
-      
-      throw error;
+      console.error('Failed to fetch deployments:', error);
+      return { deployments: [] };
     }
   }
 
   async getDeploymentDetail(twinId: number, contractId: number): Promise<DeploymentDetailResponse> {
     try {
-      // Always try to get real data first
-      const config = networkConfigService.getCurrentConfig();
-      
-      // Fetch deployment detail from GridProxy
-      const response = await fetch(`${config.gridProxyUrl}/deployments/${twinId}/${contractId}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch deployment detail: ${response.statusText}`);
+      // Check if we have mnemonic and selected node
+      if (!this.mnemonic) {
+        throw new Error('Mnemonic is required to fetch deployment details');
       }
 
-      const data = await response.json() as GridProxyDeploymentDetail;
-      
-      // Transform the data to match our expected format
-      const deployment = {
-        version: data.version || 0,
-        twin_id: data.twinId,
-        contract_id: data.contractId,
-        metadata: JSON.stringify(data.metadata || {}),
-        description: data.description || '',
-        expiration: data.expiration || 0,
-        signature_requirement: data.signatureRequirement || {
-          requests: [{ twin_id: twinId, required: false, weight: 1 }],
-          weight_required: 1,
-          signatures: [],
-          signature_style: ''
-        },
-        workloads: (data.workloads || []).map((w) => ({
-          version: w.version || 0,
-          name: w.name || '',
-          type: w.type || '',
-          data: w.data || {},
-          metadata: JSON.stringify(w.metadata || {}),
-          description: w.description || '',
-          result: {
-            created: w.created || Math.floor(Date.now() / 1000),
-            state: w.state || 'unknown',
-            message: w.message || '',
-            data: w.resultData || null
-          }
-        }))
-      };
+      if (!this.selectedNodeId) {
+        throw new Error('No node selected. Please select a node first.');
+      }
 
-      return { deployment };
+      // Use GridClient to make RMB call
+      if (gridClientService.isClientConnected()) {
+        const result = await gridClientService.getDeploymentDetail(this.selectedNodeId, twinId, contractId);
+        return result;
+      } else {
+        // Try to initialize GridClient if not connected
+        await gridClientService.initialize(this.mnemonic);
+        const result = await gridClientService.getDeploymentDetail(this.selectedNodeId, twinId, contractId);
+        return result;
+      }
     } catch (error) {
-      console.error('Failed to fetch real deployment detail:', error);
+      console.error('Failed to fetch deployment detail:', error);
       throw error;
     }
   }

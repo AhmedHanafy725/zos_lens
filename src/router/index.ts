@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import NodesView from '../views/NodesView.vue'
 import DeploymentsView from '../views/DeploymentsView.vue'
 import DeploymentDetailView from '../views/DeploymentDetailView.vue'
 
@@ -7,7 +8,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/deployments'
+      redirect: '/nodes'
+    },
+    {
+      path: '/nodes',
+      name: 'nodes',
+      component: NodesView,
     },
     {
       path: '/deployments',

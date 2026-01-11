@@ -23,6 +23,24 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label for="mnemonic-input">Mnemonic (for RMB authentication):</label>
+        <input 
+          id="mnemonic-input"
+          v-model="mnemonic"
+          type="password"
+          placeholder="Enter your mnemonic phrase"
+          class="mnemonic-input"
+          @blur="onMnemonicChange"
+        />
+        <small class="help-text">Required to make RMB calls to fetch deployments</small>
+      </div>
+
+      <div class="status-indicator">
+        <span v-if="!mnemonic" class="status-warning">⚠️ No mnemonic provided</span>
+        <span v-else class="status-success">✅ Mnemonic configured</span>
+      </div>
+
       <button 
         @click="refreshData" 
         class="btn btn-secondary"
@@ -32,12 +50,12 @@
       </button>
     </div>
 
-    <div v-if="rmbService.isUsingMockData()" class="mock-warning">
-      <p>⚠️ Using mock data. Real data is available - select a network to fetch live deployments.</p>
+    <div v-if="!mnemonic" class="mock-warning">
+      <p>⚠️ Please provide a mnemonic to authenticate RMB calls and fetch real deployment data.</p>
     </div>
 
     <div v-else class="real-data-indicator">
-      <p>✅ Using real data from ThreeFold {{ currentNetworkLabel }}</p>
+      <p>✅ Ready to fetch data from ThreeFold {{ currentNetworkLabel }}</p>
     </div>
 
     <div class="network-urls">
@@ -71,6 +89,7 @@ import { rmbService } from '@/services/rmbService';
 
 const selectedNetwork = ref<NetworkEnv>(networkConfigService.getCurrentNetwork());
 const loadingData = ref(false);
+const mnemonic = ref<string>('');
 
 const networks = computed(() => networkConfigService.getAllNetworks());
 const currentNetworkLabel = computed(() => {
@@ -86,6 +105,17 @@ const onNetworkChange = () => {
   refreshData();
 };
 
+const onMnemonicChange = () => {
+  if (mnemonic.value) {
+    // Store mnemonic securely (in production, use proper encryption)
+    localStorage.setItem('zos_lens_mnemonic', mnemonic.value);
+    rmbService.setMnemonic(mnemonic.value);
+  } else {
+    localStorage.removeItem('zos_lens_mnemonic');
+    rmbService.setMnemonic('');
+  }
+};
+
 const refreshData = async () => {
   loadingData.value = true;
   try {
@@ -99,6 +129,12 @@ const refreshData = async () => {
 };
 
 onMounted(async () => {
+  // Load mnemonic from storage
+  const storedMnemonic = localStorage.getItem('zos_lens_mnemonic');
+  if (storedMnemonic) {
+    mnemonic.value = storedMnemonic;
+    rmbService.setMnemonic(storedMnemonic);
+  }
   await rmbService.initialize();
 });
 </script>
@@ -160,6 +196,43 @@ onMounted(async () => {
   background: var(--color-background);
   color: var(--color-text);
   font-size: 14px;
+}
+
+.mnemonic-input {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 14px;
+  width: 100%;
+  font-family: monospace;
+}
+
+.mnemonic-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.help-text {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.status-indicator {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+}
+
+.status-warning {
+  color: var(--color-warning);
+}
+
+.status-success {
+  color: var(--color-success);
 }
 
 .network-select:disabled,
