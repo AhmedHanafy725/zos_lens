@@ -62,3 +62,17 @@ export interface DeploymentDetail {
 export interface DeploymentDetailResponse {
   deployment: DeploymentDetail;
 }
+
+export interface DeploymentHistoryEntry {
+  seq: number;
+  type: string;
+  name: string;
+  created: number;
+  state: string;
+  message: string;
+}
+
+export interface DeploymentHistoryResponse {
+  deployment: string;
+  history: DeploymentHistoryEntry[];
+}
