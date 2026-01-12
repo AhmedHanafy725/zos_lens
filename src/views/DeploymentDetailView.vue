@@ -186,10 +186,23 @@ const formatExpiration = (expiration: number) => {
 };
 
 const parseMetadata = (metadata: string) => {
+  // If metadata is empty or whitespace, return empty object
+  if (!metadata || metadata.trim() === '') {
+    return {};
+  }
+  
   try {
-    return JSON.parse(metadata);
+    // Try to parse as JSON
+    const parsed = JSON.parse(metadata);
+    // If it's already an object, return it
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
+    }
+    // If it's a primitive (string, number, etc.), wrap it
+    return { value: parsed };
   } catch {
-    return { error: 'Invalid metadata format', raw: metadata };
+    // If parsing fails, it's a plain string - return it as an object
+    return { text: metadata };
   }
 };
 
