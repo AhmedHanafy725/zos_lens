@@ -450,12 +450,12 @@ onMounted(() => {
 }
 
 .error-message {
-  background: var(--color-error);
+  background: #f85149 !important;
   color: white;
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
-  border: 1px solid var(--color-error);
+  border: 1px solid #f85149 !important;
 }
 
 .deployment-content {
@@ -878,7 +878,13 @@ onMounted(() => {
   padding: 0.5rem;
   background: var(--color-background);
   border-radius: 4px;
-  border-left: 3px solid var(--color-warning);
+  border-left: 3px solid var(--color-error);
+}
+
+.history-entry.error .entry-message {
+  border-left-color: #f85149;
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .workload-info {

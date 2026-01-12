@@ -316,11 +316,12 @@ onMounted(() => {
 }
 
 .error-message {
-  background: var(--color-error);
+  background: #f85149 !important;
   color: white;
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
+  border: 1px solid #f85149 !important;
 }
 
 .warning-message {
