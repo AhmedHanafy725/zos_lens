@@ -7,6 +7,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/zos_lens/',
   plugins: [
     vue(),
     nodePolyfills(),
