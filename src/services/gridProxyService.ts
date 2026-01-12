@@ -36,17 +36,21 @@ export interface Farm {
 
 class GridProxyService {
   private client: GridProxyClient | null = null;
+  private currentUrl: string = '';
 
   private getClient(): GridProxyClient {
     const config = networkConfigService.getCurrentConfig();
-    if (!this.client) {
+    // Recreate client if URL changed or client doesn't exist
+    if (!this.client || this.currentUrl !== config.gridProxyUrl) {
       this.client = new GridProxyClient(config.gridProxyUrl);
+      this.currentUrl = config.gridProxyUrl;
     }
     return this.client;
   }
 
   resetClient(): void {
     this.client = null;
+    this.currentUrl = '';
   }
 
   async getNodes(filters?: {

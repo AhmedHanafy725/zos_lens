@@ -89,6 +89,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { networkConfigService, type NetworkEnv } from '@/services/networkConfig';
 import { rmbService } from '@/services/rmbService';
+import { gridProxyService } from '@/services/gridProxyService';
+import { gridClientService } from '@/services/gridClientService';
 import { testMnemonicValidation, checkWordlistAvailability } from '@/utils/mnemonicTest';
 
 const selectedNetwork = ref<NetworkEnv>(networkConfigService.getCurrentNetwork());
@@ -139,9 +141,12 @@ const validateMnemonic = (phrase: string): boolean => {
 
 const onNetworkChange = () => {
   networkConfigService.setCurrentNetwork(selectedNetwork.value);
-  // Reset to real data when network changes
+  // Reset clients to use new network URLs
+  gridProxyService.resetClient();
   rmbService.setSelectedNode(null);
   refreshData();
+  // Force reload the current page to refresh data with new network
+  window.location.reload();
 };
 
 const onMnemonicChange = () => {
@@ -168,7 +173,9 @@ const onMnemonicChange = () => {
 const refreshData = async () => {
   loadingData.value = true;
   try {
-    // Trigger a refresh by reinitializing the service
+    // Reset GridClient to reconnect with new network
+    await gridClientService.resetClient();
+    // Reinitialize the RMB service with the new network
     await rmbService.initialize();
   } catch (error) {
     console.error('Failed to refresh data:', error);
