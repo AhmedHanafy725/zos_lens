@@ -198,7 +198,7 @@
                 :class="entry.state"
               >
                 <div class="entry-marker">
-                  <span class="seq-badge">{{ entry.seq }}</span>
+                  <span class="seq-badge">{{ entry.sequentialIndex }}</span>
                   <span class="status-dot" :class="entry.state"></span>
                 </div>
                 
@@ -235,7 +235,7 @@ interface Props {
 interface GroupedHistory {
   name: string;
   type: string;
-  entries: DeploymentHistoryEntry[];
+  entries: (DeploymentHistoryEntry & { sequentialIndex: number })[];
   latestState: string;
 }
 
@@ -263,10 +263,11 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
     }
   }
   
-  // Convert to array and sort entries within each group by seq
+  // Convert to array and sort entries within each group by timestamp
   return Array.from(groups.entries())
     .map(([name, entries]) => {
-      const sortedEntries = entries.sort((a, b) => a.seq - b.seq);
+      // Sort by timestamp (created field)
+      const sortedEntries = entries.sort((a, b) => a.created - b.created);
       const firstEntry = sortedEntries[0];
       const lastEntry = sortedEntries[sortedEntries.length - 1];
       
@@ -274,10 +275,16 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
         return null;
       }
       
+      // Add sequential index to each entry
+      const entriesWithIndex = sortedEntries.map((entry, index) => ({
+        ...entry,
+        sequentialIndex: index + 1
+      }));
+      
       return {
         name,
         type: firstEntry.type,
-        entries: sortedEntries,
+        entries: entriesWithIndex,
         latestState: lastEntry.state
       };
     })
@@ -285,7 +292,7 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
     .sort((a, b) => {
       const aFirst = a.entries[0];
       const bFirst = b.entries[0];
-      return (aFirst?.seq || 0) - (bFirst?.seq || 0);
+      return (aFirst?.created || 0) - (bFirst?.created || 0);
     });
 });
 
