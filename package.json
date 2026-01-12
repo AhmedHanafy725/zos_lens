@@ -19,6 +19,7 @@
     "@threefold/grid_client": "^2.9.2",
     "@threefold/gridproxy_client": "^2.9.2",
     "@threefold/rmb_direct_client": "^2.9.2",
+    "bip39": "^3.1.0",
     "libsodium-wrappers": "^0.8.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.26",
@@ -31,6 +32,7 @@
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
+    "buffer": "^6.0.3",
     "eslint": "^9.39.2",
     "eslint-plugin-vue": "~10.6.2",
     "jiti": "^2.6.1",
@@ -38,6 +40,7 @@
     "prettier": "3.7.4",
     "typescript": "~5.9.3",
     "vite": "^7.3.0",
+    "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-vue-devtools": "^8.0.5",
     "vue-tsc": "^3.2.2"
   }

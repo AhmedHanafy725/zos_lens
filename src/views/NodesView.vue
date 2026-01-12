@@ -119,8 +119,8 @@ const loadNodes = async () => {
       size: 100,
     });
     
-    // Filter only "up" status nodes
-    nodes.value = result.filter((node: Node) => node.status === 'up');
+    // Nodes are already filtered by status=up at the API level
+    nodes.value = result;
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load nodes';
     console.error('Failed to load nodes:', err);
@@ -140,7 +140,7 @@ const clearFilters = () => {
 
 const selectNode = (node: Node) => {
   // Set the selected node in RMB service
-  rmbService.setSelectedNode(node.nodeId);
+  rmbService.setSelectedNode(node.twinId);
   
   // Navigate to deployments view
   router.push('/deployments');

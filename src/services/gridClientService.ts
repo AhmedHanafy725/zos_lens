@@ -12,7 +12,7 @@ class GridClientService {
       throw new Error('Mnemonic is required to initialize RMB Client');
     }
 
-    this.mnemonic = mnemonic;
+    this.mnemonic = mnemonic.trim();
     
     try {
       const config = networkConfigService.getCurrentConfig();
@@ -36,6 +36,20 @@ class GridClientService {
     } catch (error) {
       console.error('Failed to initialize RMB Client:', error);
       this.isConnected = false;
+      
+      // Provide more helpful error messages
+      if (error instanceof Error) {
+        const errorMsg = error.message.toLowerCase();
+        
+        if (errorMsg.includes('invalid') && errorMsg.includes('mnemonic')) {
+          throw new Error(`Mnemonic validation failed: The mnemonic phrase is not valid according to BIP39 standards. Please check:\n- Correct number of words (12 or 24)\n- No typos in words\n- Words are from the BIP39 wordlist\n- No extra spaces or special characters`);
+        } else if (errorMsg.includes('twin') || errorMsg.includes('user')) {
+          throw new Error(`No twin found: Your account doesn't exist on the ${networkConfigService.getCurrentNetwork()} network. Please:\n- Verify you're on the correct network\n- Ensure your account has been activated on this network\n- Try a different network if needed`);
+        } else if (errorMsg.includes('connect') || errorMsg.includes('network')) {
+          throw new Error(`Network connection failed: ${error.message}\nPlease check your internet connection and try again.`);
+        }
+      }
+      
       throw error;
     }
   }

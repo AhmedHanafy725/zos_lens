@@ -31,13 +31,16 @@
           type="password"
           placeholder="Enter your mnemonic phrase"
           class="mnemonic-input"
+          :class="{ 'input-error': mnemonicError }"
           @blur="onMnemonicChange"
         />
-        <small class="help-text">Required to make RMB calls to fetch deployments</small>
+        <small v-if="mnemonicError" class="error-text">{{ mnemonicError }}</small>
+        <small v-else class="help-text">Required to make RMB calls (12 or 24 words)</small>
       </div>
 
       <div class="status-indicator">
         <span v-if="!mnemonic" class="status-warning">⚠️ No mnemonic provided</span>
+        <span v-else-if="mnemonicError" class="status-error">❌ Invalid mnemonic</span>
         <span v-else class="status-success">✅ Mnemonic configured</span>
       </div>
 
@@ -86,10 +89,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { networkConfigService, type NetworkEnv } from '@/services/networkConfig';
 import { rmbService } from '@/services/rmbService';
+import { testMnemonicValidation, checkWordlistAvailability } from '@/utils/mnemonicTest';
 
 const selectedNetwork = ref<NetworkEnv>(networkConfigService.getCurrentNetwork());
 const loadingData = ref(false);
 const mnemonic = ref<string>('');
+const mnemonicError = ref<string>('');
 
 const networks = computed(() => networkConfigService.getAllNetworks());
 const currentNetworkLabel = computed(() => {
@@ -97,6 +102,40 @@ const currentNetworkLabel = computed(() => {
   return network ? network.label : 'Unknown';
 });
 const currentConfig = computed(() => networkConfigService.getCurrentConfig());
+
+const validateMnemonic = (phrase: string): boolean => {
+  if (!phrase || phrase.trim() === '') {
+    return false;
+  }
+  
+  // Run the test utility to see what's happening
+  const testResult = testMnemonicValidation(phrase);
+  
+  // BIP39 mnemonic should be 12, 15, 18, 21, or 24 words
+  const words = phrase.trim().split(/\s+/);
+  const validWordCounts = [12, 15, 18, 21, 24];
+  
+  if (!validWordCounts.includes(words.length)) {
+    mnemonicError.value = `Invalid mnemonic: must be ${validWordCounts.join(', ')} words. Found ${words.length} words.`;
+    return false;
+  }
+  
+  // Basic validation: each word should be lowercase letters only
+  const invalidWords = words.filter(word => !/^[a-z]+$/.test(word));
+  if (invalidWords.length > 0) {
+    mnemonicError.value = 'Invalid mnemonic: words should contain only lowercase letters';
+    return false;
+  }
+  
+  // If bip39 test failed, show error
+  if (!testResult) {
+    mnemonicError.value = 'Invalid mnemonic: BIP39 validation failed. One or more words are not in the BIP39 wordlist.';
+    return false;
+  }
+  
+  mnemonicError.value = '';
+  return true;
+};
 
 const onNetworkChange = () => {
   networkConfigService.setCurrentNetwork(selectedNetwork.value);
@@ -106,11 +145,21 @@ const onNetworkChange = () => {
 };
 
 const onMnemonicChange = () => {
-  if (mnemonic.value) {
+  const trimmedMnemonic = mnemonic.value.trim();
+  
+  if (!trimmedMnemonic) {
+    localStorage.removeItem('zos_lens_mnemonic');
+    rmbService.setMnemonic('');
+    mnemonicError.value = '';
+    return;
+  }
+  
+  if (validateMnemonic(trimmedMnemonic)) {
     // Store mnemonic securely (in production, use proper encryption)
-    localStorage.setItem('zos_lens_mnemonic', mnemonic.value);
-    rmbService.setMnemonic(mnemonic.value);
+    localStorage.setItem('zos_lens_mnemonic', trimmedMnemonic);
+    rmbService.setMnemonic(trimmedMnemonic);
   } else {
+    // Don't store invalid mnemonic
     localStorage.removeItem('zos_lens_mnemonic');
     rmbService.setMnemonic('');
   }
@@ -129,11 +178,20 @@ const refreshData = async () => {
 };
 
 onMounted(async () => {
+  // Check wordlist availability on mount
+  checkWordlistAvailability();
+  
   // Load mnemonic from storage
   const storedMnemonic = localStorage.getItem('zos_lens_mnemonic');
   if (storedMnemonic) {
     mnemonic.value = storedMnemonic;
-    rmbService.setMnemonic(storedMnemonic);
+    if (validateMnemonic(storedMnemonic)) {
+      rmbService.setMnemonic(storedMnemonic);
+    } else {
+      // Clear invalid stored mnemonic
+      localStorage.removeItem('zos_lens_mnemonic');
+      mnemonic.value = '';
+    }
   }
   await rmbService.initialize();
 });
@@ -209,12 +267,23 @@ onMounted(async () => {
   font-family: monospace;
 }
 
+.mnemonic-input.input-error {
+  border-color: #ef4444;
+}
+
 .mnemonic-input::placeholder {
   color: var(--color-text-muted);
 }
 
 .help-text {
   color: var(--color-text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.error-text {
+  color: #ef4444;
   font-size: 12px;
   margin-top: 4px;
   display: block;
@@ -229,6 +298,10 @@ onMounted(async () => {
 
 .status-warning {
   color: var(--color-warning);
+}
+
+.status-error {
+  color: #ef4444;
 }
 
 .status-success {

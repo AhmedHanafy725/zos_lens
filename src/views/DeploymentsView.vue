@@ -8,12 +8,20 @@
       </button>
     </div>
 
-    <div v-if="error" class="error-message">
+    <div v-if="!hasMnemonic" class="warning-message">
+      <p>⚠️ Please configure your mnemonic in the sidebar to fetch deployments via RMB.</p>
+    </div>
+
+    <div v-else-if="!hasSelectedNode" class="warning-message">
+      <p>⚠️ Please select a node from the <router-link to="/nodes">Nodes page</router-link> to view its deployments.</p>
+    </div>
+
+    <div v-else-if="error" class="error-message">
       {{ error }}
     </div>
 
-    <div v-if="deployments.length === 0 && !loading && !error" class="empty-state">
-      No deployments found
+    <div v-else-if="deployments.length === 0 && !loading" class="empty-state">
+      No deployments found on this node
     </div>
 
     <div v-else class="deployments-grid">
@@ -60,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { rmbService } from '@/services/rmbService';
 import type { Deployment } from '@/types/deployment';
@@ -69,6 +77,9 @@ const router = useRouter();
 const deployments = ref<Deployment[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+const hasMnemonic = computed(() => rmbService.hasMnemonic());
+const hasSelectedNode = computed(() => rmbService.getSelectedNode() !== null);
 
 const loadDeployments = async () => {
   loading.value = true;
@@ -151,6 +162,20 @@ onMounted(() => {
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
+}
+
+.warning-message {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  color: var(--color-text);
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.warning-message a {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 .empty-state {

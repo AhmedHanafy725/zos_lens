@@ -1,4 +1,5 @@
 import GridProxyClient from '@threefold/gridproxy_client';
+import { UnifiedNodeStatus } from '@threefold/gridproxy_client';
 import { networkConfigService } from './networkConfig';
 
 export interface Node {
@@ -61,6 +62,7 @@ class GridProxyService {
         farmIds: filters?.farmId ? String(filters.farmId) : undefined,
         country: filters?.country,
         city: filters?.city,
+        status: UnifiedNodeStatus.Up,
         page: filters?.page || 1,
         size: filters?.size || 50,
       });
