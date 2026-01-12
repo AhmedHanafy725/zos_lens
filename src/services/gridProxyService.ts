@@ -50,36 +50,46 @@ class GridProxyService {
   }
 
   async getNodes(filters?: {
+    nodeId?: number;
     farmId?: number;
     country?: string;
     city?: string;
     page?: number;
     size?: number;
-  }): Promise<Node[]> {
+  }): Promise<{ data: Node[]; count: number }> {
     try {
       const client = this.getClient();
       const response = await client.nodes.list({
+        nodeId: filters?.nodeId,
         farmIds: filters?.farmId ? String(filters.farmId) : undefined,
         country: filters?.country,
         city: filters?.city,
         status: UnifiedNodeStatus.Up,
         page: filters?.page || 1,
         size: filters?.size || 50,
+        retCount: true, // Request total count from GridProxy
       });
       
       // GridProxy returns paginated data with structure { data: [...], count: number }
       // Check if response has a data property (paginated response)
-      if (response && typeof response === 'object' && 'data' in response) {
-        return (response.data as Node[]) || [];
+      if (response && typeof response === 'object' && 'data' in response && 'count' in response) {
+        return {
+          data: (response.data as Node[]) || [],
+          count: (response.count as number) || 0
+        };
       }
       
       // Fallback: if it's already an array
       if (Array.isArray(response)) {
-        return response as Node[];
+        const nodes = response as Node[];
+        return {
+          data: nodes,
+          count: nodes.length
+        };
       }
       
-      // Default: empty array
-      return [];
+      // Default: empty result
+      return { data: [], count: 0 };
     } catch (error) {
       console.error('Failed to fetch nodes:', error);
       throw error;

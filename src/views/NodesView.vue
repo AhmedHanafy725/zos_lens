@@ -7,6 +7,16 @@
 
     <div class="filters">
       <div class="filter-group">
+        <label for="node-id-filter">Node ID:</label>
+        <input 
+          id="node-id-filter"
+          v-model.number="filters.nodeId"
+          type="number"
+          placeholder="Filter by node ID"
+          @input="loadNodes"
+        />
+      </div>
+      <div class="filter-group">
         <label for="country-filter">Country:</label>
         <input 
           id="country-filter"
@@ -52,40 +62,60 @@
       <p>No nodes found with the current filters.</p>
     </div>
 
-    <div v-else class="nodes-grid">
-      <div 
-        v-for="node in nodes" 
-        :key="node.nodeId"
-        class="node-card"
-        @click="selectNode(node)"
-      >
-        <div class="node-header">
-          <h3>Node {{ node.nodeId }}</h3>
-          <span class="status-badge" :class="node.status">{{ node.status }}</span>
-        </div>
-        <div class="node-info">
-          <div class="info-item">
-            <span class="label">Farm ID:</span>
-            <span class="value">{{ node.farmId }}</span>
+    <div v-else>
+      <div class="results-info">
+        <p>Showing {{ nodes.length }} of {{ totalCount }} nodes (Page {{ currentPage }} of {{ totalPages }})</p>
+      </div>
+
+      <div class="nodes-grid">
+        <div 
+          v-for="node in nodes" 
+          :key="node.nodeId"
+          class="node-card"
+          @click="selectNode(node)"
+        >
+          <div class="node-header">
+            <h3>Node {{ node.nodeId }}</h3>
+            <span class="status-badge" :class="node.status">{{ node.status }}</span>
           </div>
-          <div class="info-item">
-            <span class="label">Twin ID:</span>
-            <span class="value">{{ node.twinId }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Location:</span>
-            <span class="value">{{ node.city }}, {{ node.country }}</span>
-          </div>
-          <div v-if="node.publicConfig" class="info-item">
-            <span class="label">Public IP:</span>
-            <span class="value">{{ node.publicConfig.ipv4 || 'N/A' }}</span>
+          <div class="node-info">
+            <div class="info-item">
+              <span class="label">Farm ID:</span>
+              <span class="value">{{ node.farmId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Twin ID:</span>
+              <span class="value">{{ node.twinId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Location:</span>
+              <span class="value">{{ node.city }}, {{ node.country }}</span>
+            </div>
+            <div v-if="node.publicConfig" class="info-item">
+              <span class="label">Public IP:</span>
+              <span class="value">{{ node.publicConfig.ipv4 || 'N/A' }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-if="nodes.length > 0" class="pagination">
-      <p>Showing {{ nodes.length }} nodes</p>
+      <div class="pagination">
+        <button 
+          @click="previousPage" 
+          :disabled="currentPage === 1 || loading"
+          class="btn btn-secondary"
+        >
+          Previous
+        </button>
+        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+        <button 
+          @click="nextPage" 
+          :disabled="currentPage === totalPages || loading"
+          class="btn btn-secondary"
+        >
+          Next
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -102,10 +132,16 @@ const loading = ref(false);
 const error = ref('');
 
 const filters = ref({
+  nodeId: undefined as number | undefined,
   country: '',
   city: '',
   farmId: undefined as number | undefined,
 });
+
+const currentPage = ref(1);
+const pageSize = ref(50);
+const totalCount = ref(0);
+const totalPages = ref(0);
 
 const loadNodes = async () => {
   loading.value = true;
@@ -113,14 +149,18 @@ const loadNodes = async () => {
   
   try {
     const result = await gridProxyService.getNodes({
+      nodeId: filters.value.nodeId,
       country: filters.value.country || undefined,
       city: filters.value.city || undefined,
       farmId: filters.value.farmId,
-      size: 100,
+      page: currentPage.value,
+      size: pageSize.value,
     });
     
     // Nodes are already filtered by status=up at the API level
-    nodes.value = result;
+    nodes.value = result.data;
+    totalCount.value = result.count;
+    totalPages.value = Math.ceil(result.count / pageSize.value);
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load nodes';
     console.error('Failed to load nodes:', err);
@@ -131,11 +171,27 @@ const loadNodes = async () => {
 
 const clearFilters = () => {
   filters.value = {
+    nodeId: undefined,
     country: '',
     city: '',
     farmId: undefined,
   };
+  currentPage.value = 1;
   loadNodes();
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    loadNodes();
+  }
+};
+
+const previousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    loadNodes();
+  }
 };
 
 const selectNode = (node: Node) => {
@@ -322,9 +378,31 @@ onMounted(() => {
 }
 
 .pagination {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
   padding: 20px;
+  margin-top: 20px;
+}
+
+.pagination .page-info {
+  font-size: 14px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.pagination .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.results-info {
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 20px;
   color: var(--color-text-muted);
+  font-size: 14px;
 }
 
 @media (max-width: 768px) {
@@ -339,6 +417,11 @@ onMounted(() => {
   
   .nodes-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 10px;
   }
 }
 </style>
