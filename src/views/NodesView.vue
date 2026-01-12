@@ -195,8 +195,8 @@ const previousPage = () => {
 };
 
 const selectNode = (node: Node) => {
-  // Set the selected node in RMB service (use twinId for RMB calls)
-  rmbService.setSelectedNode(node.twinId);
+  // Set the selected node in RMB service (pass both node ID and twin ID)
+  rmbService.setSelectedNode(node.nodeId, node.twinId);
   
   // Navigate to deployments view
   router.push('/deployments');

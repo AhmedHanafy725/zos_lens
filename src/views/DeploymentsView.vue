@@ -1,7 +1,12 @@
 <template>
   <div class="deployments-view">
     <div class="view-header">
-      <h2>Deployments</h2>
+      <div class="header-content">
+        <h2>Deployments</h2>
+        <p v-if="hasSelectedNode" class="node-info">
+          Viewing deployments for Node {{ selectedNodeId }}
+        </p>
+      </div>
       <button @click="refreshDeployments" class="refresh-btn" :disabled="loading">
         <span v-if="loading">Loading...</span>
         <span v-else>Refresh</span>
@@ -21,7 +26,7 @@
     </div>
 
     <div v-else-if="deployments.length === 0 && !loading" class="empty-state">
-      No deployments found on this node
+      No deployments found on Node {{ selectedNodeId }}
     </div>
 
     <div v-else class="deployments-grid">
@@ -80,6 +85,7 @@ const error = ref<string | null>(null);
 
 const hasMnemonic = computed(() => rmbService.hasMnemonic());
 const hasSelectedNode = computed(() => rmbService.getSelectedNode() !== null);
+const selectedNodeId = computed(() => rmbService.getSelectedNodeId());
 
 const loadDeployments = async () => {
   loading.value = true;
@@ -125,8 +131,14 @@ onMounted(() => {
 .view-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1.5rem;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .view-header h2 {
@@ -134,6 +146,13 @@ onMounted(() => {
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
+}
+
+.node-info {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  margin: 0;
+  font-weight: 500;
 }
 
 .refresh-btn {
@@ -296,5 +315,22 @@ onMounted(() => {
 
 .status-indicator.degraded {
   background: var(--color-warning);
+}
+
+@media (max-width: 768px) {
+  .view-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .header-content {
+    align-items: center;
+    text-align: center;
+  }
+  
+  .refresh-btn {
+    align-self: center;
+  }
 }
 </style>

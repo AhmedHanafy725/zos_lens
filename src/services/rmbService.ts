@@ -26,6 +26,7 @@ function castWorkloadState(state: string): Workload['state'] {
 
 class RMBService {
   private selectedNodeId: number | null = null;
+  private selectedTwinId: number | null = null;
   private useMockData: boolean = false;
   private mnemonic: string = '';
 
@@ -33,8 +34,10 @@ class RMBService {
     try {
       // Load selected node from storage
       const storedNodeId = localStorage.getItem('zos_lens_selected_node');
-      if (storedNodeId) {
+      const storedTwinId = localStorage.getItem('zos_lens_selected_twin');
+      if (storedNodeId && storedTwinId) {
         this.selectedNodeId = parseInt(storedNodeId);
+        this.selectedTwinId = parseInt(storedTwinId);
         this.useMockData = false;
       }
       
@@ -87,19 +90,32 @@ class RMBService {
     return this.mnemonic.length > 0;
   }
 
-  setSelectedNode(nodeId: number | null) {
+  setSelectedNode(nodeId: number | null, twinId: number | null = null) {
     this.selectedNodeId = nodeId;
+    this.selectedTwinId = twinId;
     this.useMockData = nodeId === null;
     
     if (nodeId) {
       localStorage.setItem('zos_lens_selected_node', String(nodeId));
+      if (twinId) {
+        localStorage.setItem('zos_lens_selected_twin', String(twinId));
+      }
     } else {
       localStorage.removeItem('zos_lens_selected_node');
+      localStorage.removeItem('zos_lens_selected_twin');
     }
   }
 
   getSelectedNode(): number | null {
     return this.selectedNodeId;
+  }
+
+  getSelectedNodeId(): number | null {
+    return this.selectedNodeId;
+  }
+
+  getSelectedTwinId(): number | null {
+    return this.selectedTwinId;
   }
 
   async listDeployments(): Promise<DeploymentListResponse> {
@@ -110,24 +126,20 @@ class RMBService {
         return { deployments: [] };
       }
 
-      if (!this.selectedNodeId) {
-        console.warn('No node selected. Cannot fetch deployments via RMB.');
+      if (!this.selectedTwinId) {
+        console.warn('No twin selected. Cannot fetch deployments via RMB.');
         return { deployments: [] };
       }
 
-      console.log(`Fetching deployments from node ${this.selectedNodeId} via RMB...`);
-
-      // Use GridClient to make RMB call
+      // Use GridClient to make RMB call (RMB uses twin ID)
       if (gridClientService.isClientConnected()) {
-        const result = await gridClientService.getNodeDeployments(this.selectedNodeId);
-        console.log(`Fetched ${result.deployments.length} deployments from node ${this.selectedNodeId}`);
+        const result = await gridClientService.getNodeDeployments(this.selectedTwinId);
         return result;
       } else {
         // Try to initialize GridClient if not connected
         console.log('Initializing RMB client...');
         await gridClientService.initialize(this.mnemonic);
-        const result = await gridClientService.getNodeDeployments(this.selectedNodeId);
-        console.log(`Fetched ${result.deployments.length} deployments from node ${this.selectedNodeId}`);
+        const result = await gridClientService.getNodeDeployments(this.selectedTwinId);
         return result;
       }
     } catch (error) {
@@ -143,18 +155,18 @@ class RMBService {
         throw new Error('Mnemonic is required to fetch deployment details');
       }
 
-      if (!this.selectedNodeId) {
-        throw new Error('No node selected. Please select a node first.');
+      if (!this.selectedTwinId) {
+        throw new Error('No twin selected. Please select a node first.');
       }
 
-      // Use GridClient to make RMB call
+      // Use GridClient to make RMB call (RMB uses twin ID)
       if (gridClientService.isClientConnected()) {
-        const result = await gridClientService.getDeploymentDetail(this.selectedNodeId, twinId, contractId);
+        const result = await gridClientService.getDeploymentDetail(this.selectedTwinId, twinId, contractId);
         return result;
       } else {
         // Try to initialize GridClient if not connected
         await gridClientService.initialize(this.mnemonic);
-        const result = await gridClientService.getDeploymentDetail(this.selectedNodeId, twinId, contractId);
+        const result = await gridClientService.getDeploymentDetail(this.selectedTwinId, twinId, contractId);
         return result;
       }
     } catch (error) {
