@@ -40,7 +40,7 @@
 
       <div class="deployment-metadata-card">
         <h3>Metadata</h3>
-        <pre class="metadata-content">{{ formatMetadata(deployment.metadata) }}</pre>
+        <JsonFormatter :data="parseMetadata(deployment.metadata)" />
       </div>
 
       <div class="deployment-signature-card">
@@ -96,12 +96,12 @@
             <div class="workload-details">
               <div class="workload-section">
                 <h4>Data</h4>
-                <pre class="json-content">{{ JSON.stringify(workload.data, null, 2) }}</pre>
+                <JsonFormatter :data="workload.data" />
               </div>
               
               <div class="workload-section">
                 <h4>Metadata</h4>
-                <pre class="metadata-content">{{ formatMetadata(workload.metadata) }}</pre>
+                <JsonFormatter :data="parseMetadata(workload.metadata)" />
               </div>
               
               <div class="workload-section">
@@ -121,7 +121,7 @@
                   </div>
                   <div v-if="workload.result.data" class="info-item">
                     <span class="label">Data:</span>
-                    <pre class="json-content">{{ JSON.stringify(workload.result.data, null, 2) }}</pre>
+                    <JsonFormatter :data="workload.result.data" />
                   </div>
                 </div>
               </div>
@@ -137,6 +137,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { rmbService } from '@/services/rmbService';
+import JsonFormatter from '@/components/JsonFormatter.vue';
 import type { DeploymentDetail } from '@/types/deployment';
 
 interface Props {
@@ -184,11 +185,11 @@ const formatExpiration = (expiration: number) => {
   return expiration === 0 ? 'Never' : formatDate(expiration);
 };
 
-const formatMetadata = (metadata: string) => {
+const parseMetadata = (metadata: string) => {
   try {
-    return JSON.stringify(JSON.parse(metadata), null, 2);
+    return JSON.parse(metadata);
   } catch {
-    return metadata;
+    return { error: 'Invalid metadata format', raw: metadata };
   }
 };
 
