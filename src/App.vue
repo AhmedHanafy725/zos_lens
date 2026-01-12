@@ -1,19 +1,49 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import NetworkSelector from '@/components/NetworkSelector.vue'
 import { onMounted } from 'vue'
 import { rmbService } from '@/services/rmbService'
 
+const router = useRouter()
+
 onMounted(async () => {
   await rmbService.initialize()
 })
+
+const goToHome = () => {
+  router.push('/')
+}
 </script>
 
 <template>
   <div class="app-container">
     <header class="app-header">
       <div class="logo-section">
-        <h1 class="app-title">ZOS Lens</h1>
+        <div class="logo-icon clickable" @click="goToHome">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background circle -->
+            <circle cx="16" cy="16" r="15" fill="#1a1a1a" stroke="#3b82f6" stroke-width="2"/>
+            
+            <!-- ZOS Lens icon - stylized eye with grid pattern -->
+            <!-- Eye shape -->
+            <ellipse cx="16" cy="16" rx="10" ry="6" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+            
+            <!-- Grid pattern inside eye -->
+            <rect x="11" y="13" width="3" height="3" fill="#60a5fa"/>
+            <rect x="14.5" y="13" width="3" height="3" fill="#60a5fa"/>
+            <rect x="18" y="13" width="3" height="3" fill="#60a5fa"/>
+            <rect x="11" y="16.5" width="3" height="3" fill="#60a5fa"/>
+            <rect x="14.5" y="16.5" width="3" height="3" fill="#93c5fd"/>
+            <rect x="18" y="16.5" width="3" height="3" fill="#60a5fa"/>
+            
+            <!-- Lens focus point -->
+            <circle cx="16" cy="16" r="1.5" fill="#dbeafe"/>
+            
+            <!-- Z text -->
+            <text x="16" y="26" font-family="monospace" font-size="4" font-weight="bold" fill="#3b82f6" text-anchor="middle">ZOS</text>
+          </svg>
+        </div>
+        <h1 class="app-title clickable" @click="goToHome">ZOS Lens</h1>
       </div>
     </header>
     
@@ -52,6 +82,20 @@ onMounted(async () => {
 .logo-section {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.logo-icon:hover {
+  transform: scale(1.05);
+}
+
+.logo-icon svg {
+  display: block;
 }
 
 .app-title {
@@ -59,6 +103,15 @@ onMounted(async () => {
   font-weight: 600;
   color: var(--color-heading);
   margin: 0;
+}
+
+.app-title.clickable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.app-title.clickable:hover {
+  color: var(--color-primary);
 }
 
 .app-main {
