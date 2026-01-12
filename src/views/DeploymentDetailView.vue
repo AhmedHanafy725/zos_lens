@@ -38,6 +38,33 @@
         </div>
       </div>
 
+      <!-- Workload Summary Statistics -->
+      <div v-if="history.length > 0" class="history-summary-card">
+        <h3>Workload Status Summary</h3>
+        <div class="history-summary">
+          <div class="summary-item">
+            <span class="summary-label">Total Workloads</span>
+            <span class="summary-value total">{{ historySummary.total }}</span>
+          </div>
+          <div class="summary-item init">
+            <span class="summary-label">Init</span>
+            <span class="summary-value">{{ historySummary.init }}</span>
+          </div>
+          <div class="summary-item ok">
+            <span class="summary-label">OK</span>
+            <span class="summary-value">{{ historySummary.ok }}</span>
+          </div>
+          <div class="summary-item error">
+            <span class="summary-label">Error</span>
+            <span class="summary-value">{{ historySummary.error }}</span>
+          </div>
+          <div v-if="historySummary.other > 0" class="summary-item other">
+            <span class="summary-label">Other</span>
+            <span class="summary-value">{{ historySummary.other }}</span>
+          </div>
+        </div>
+      </div>
+
       <div class="deployment-metadata-card">
         <h3>Metadata</h3>
         <JsonFormatter :data="parseMetadata(deployment.metadata)" />
@@ -147,12 +174,12 @@
         </div>
         
         <div v-else class="history-timeline">
-          <div 
-            v-for="group in groupedHistory" 
-            :key="group.name" 
-            class="history-group"
-            :class="group.latestState"
-          >
+            <div 
+              v-for="group in groupedHistory" 
+              :key="group.name" 
+              class="history-group"
+              :class="group.latestState"
+            >
             <div class="group-header">
               <div class="workload-info">
                 <span class="workload-type">{{ group.type.toUpperCase() }}</span>
@@ -258,6 +285,34 @@ const groupedHistory = computed<GroupedHistory[]>(() => {
       const bFirst = b.entries[0];
       return (aFirst?.seq || 0) - (bFirst?.seq || 0);
     });
+});
+
+// Calculate summary statistics for workload states
+const historySummary = computed(() => {
+  const summary = {
+    total: 0,
+    ok: 0,
+    init: 0,
+    error: 0,
+    other: 0
+  };
+  
+  // Count the latest state of each workload
+  for (const group of groupedHistory.value) {
+    summary.total++;
+    const state = group.latestState.toLowerCase();
+    if (state === 'ok') {
+      summary.ok++;
+    } else if (state === 'init') {
+      summary.init++;
+    } else if (state === 'error') {
+      summary.error++;
+    } else {
+      summary.other++;
+    }
+  }
+  
+  return summary;
 });
 
 const loadDeployment = async () => {
@@ -400,6 +455,7 @@ onMounted(() => {
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
+  border: 1px solid var(--color-error);
 }
 
 .deployment-content {
@@ -411,7 +467,8 @@ onMounted(() => {
 .deployment-info-card,
 .deployment-metadata-card,
 .deployment-signature-card,
-.workloads-card {
+.workloads-card,
+.history-summary-card {
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -421,7 +478,8 @@ onMounted(() => {
 .deployment-info-card h3,
 .deployment-metadata-card h3,
 .deployment-signature-card h3,
-.workloads-card h3 {
+.workloads-card h3,
+.history-summary-card h3 {
   color: var(--color-heading);
   font-size: 1.1rem;
   font-weight: 600;
@@ -564,12 +622,8 @@ onMounted(() => {
   background: var(--color-success);
 }
 
-.status-indicator.failed {
+.status-indicator.error {
   background: var(--color-error);
-}
-
-.status-indicator.degraded {
-  background: var(--color-warning);
 }
 
 .workload-details {
@@ -612,6 +666,76 @@ onMounted(() => {
   text-align: center;
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+.history-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--color-background);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--color-background-soft);
+  border-radius: 8px;
+  border: 2px solid var(--color-border);
+  transition: all 0.2s;
+}
+
+.summary-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-item.ok {
+  border-color: var(--color-success);
+}
+
+.summary-item.init {
+  border-color: var(--color-info);
+}
+
+.summary-item.error {
+  border-color: var(--color-error);
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.summary-value.total {
+  color: var(--color-primary);
+}
+
+.summary-item.ok .summary-value {
+  color: var(--color-success);
+}
+
+.summary-item.init .summary-value {
+  color: var(--color-info);
+}
+
+.summary-item.error .summary-value {
+  color: var(--color-error);
 }
 
 .history-timeline {
@@ -702,12 +826,8 @@ onMounted(() => {
   background: var(--color-info);
 }
 
-.status-dot.failed {
+.status-dot.error {
   background: var(--color-error);
-}
-
-.status-dot.degraded {
-  background: var(--color-warning);
 }
 
 .entry-content {
@@ -742,14 +862,9 @@ onMounted(() => {
   color: var(--color-info);
 }
 
-.state-label.failed {
+.state-label.error {
   background: var(--color-error-bg);
   color: var(--color-error);
-}
-
-.state-label.degraded {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
 }
 
 .timestamp {
@@ -805,14 +920,9 @@ onMounted(() => {
   color: var(--color-info);
 }
 
-.history-state.failed {
+.history-state.error {
   background: var(--color-error-bg);
   color: var(--color-error);
-}
-
-.history-state.degraded {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
 }
 
 .history-details {

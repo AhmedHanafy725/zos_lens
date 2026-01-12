@@ -39,8 +39,13 @@
   --color-secondary-hover: #30363d;
 
   --color-success: #238636;
+  --color-success-bg: rgba(35, 134, 54, 0.15);
   --color-warning: #9e6a03;
-  --color-error: #da3633;
+  --color-warning-bg: rgba(158, 106, 3, 0.15);
+  --color-error: #f85149;
+  --color-error-bg: rgba(248, 81, 73, 0.15);
+  --color-info: #58a6ff;
+  --color-info-bg: rgba(88, 166, 255, 0.15);
 
   --section-gap: 160px;
 }
