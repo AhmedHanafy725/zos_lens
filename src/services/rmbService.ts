@@ -14,7 +14,7 @@ interface GridProxyDeployment {
 
 // Helper function to safely cast workload type
 function castWorkloadType(type: string): Workload['type'] {
-  const validTypes: Workload['type'][] = ['zdb', 'network', 'zmachine', 'zmount'];
+  const validTypes: Workload['type'][] = ['zdb', 'network', 'zmachine', 'zmount', 'ip'];
   return validTypes.includes(type as Workload['type']) ? type as Workload['type'] : 'network';
 }
 

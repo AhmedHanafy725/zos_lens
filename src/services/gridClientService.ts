@@ -1,9 +1,11 @@
 import { Client } from '@threefold/rmb_direct_client';
 import { networkConfigService } from './networkConfig';
+import { RMBWrapper } from './rmbWrapper';
 import type { DeploymentListResponse, DeploymentDetailResponse, DeploymentDetail } from '@/types/deployment';
 
 class GridClientService {
   private client: Client | null = null;
+  private rmbWrapper: RMBWrapper | null = null;
   private mnemonic: string = '';
   private isConnected: boolean = false;
 
@@ -32,6 +34,9 @@ class GridClientService {
       await this.client.connect();
       this.isConnected = true;
       
+      // Initialize RMB wrapper
+      this.rmbWrapper = new RMBWrapper(this.client);
+      
       console.log('RMB Client connected successfully');
     } catch (error) {
       console.error('Failed to initialize RMB Client:', error);
@@ -59,6 +64,7 @@ class GridClientService {
       try {
         this.client.disconnect();
         this.isConnected = false;
+        this.rmbWrapper = null;
         this.client = null;
         console.log('RMB Client disconnected');
       } catch (error) {
@@ -80,18 +86,24 @@ class GridClientService {
 
   async getNodeDeployments(nodeId: number): Promise<DeploymentListResponse> {
     try {
-      const client = this.getClient();
+      if (!this.rmbWrapper) {
+        throw new Error('RMB Wrapper is not initialized');
+      }
       
-      // Use RMB to call zos.debug.deployment.list on the specific node
-      const result = await client.send('zos.debug.deployment.list', '', nodeId, 30);
+      // Use RMB wrapper to call zos.debug.deployment.list on the specific node
+      const result = await this.rmbWrapper.request('zos.debug.deployment.list', '', nodeId, 30);
       
       if (!result || typeof result === 'string') {
         return { deployments: [] };
       }
 
+      // The RMB result can be in two formats:
+      // 1. Direct: { deployments: [...] }
+      // 2. Wrapped: { result: { deployments: [...] } }
+      const response = result as { deployments?: unknown[]; result?: { deployments?: unknown[] } };
+      const deployments = response.deployments || response.result?.deployments || [];
+
       // Transform the response to match our format
-      const deployments = Array.isArray(result) ? result : [];
-      
       return {
         deployments: deployments.map((dep: unknown) => {
           const deployment = dep as { 
@@ -103,7 +115,7 @@ class GridClientService {
             twin_id: deployment.twin_id,
             contract_id: deployment.contract_id,
             workloads: (deployment.workloads || []).map(w => ({
-              type: w.type as 'zdb' | 'network' | 'zmachine' | 'zmount',
+              type: w.type as 'zdb' | 'network' | 'zmachine' | 'zmount' | 'ip',
               name: w.name,
               state: w.state as 'ok' | 'failed' | 'degraded' | string
             }))
@@ -111,18 +123,21 @@ class GridClientService {
         })
       };
     } catch (error) {
-      console.error('Failed to get node deployments:', error);
-      throw error;
+      console.error(`Failed to get deployments for node ${nodeId}:`, error);
+      return { deployments: [] };
     }
   }
 
   async getDeploymentDetail(nodeId: number, twinId: number, contractId: number): Promise<DeploymentDetailResponse> {
     try {
-      const client = this.getClient();
+      if (!this.rmbWrapper) {
+        throw new Error('RMB Wrapper is not initialized');
+      }
       
-      // Use RMB to call zos.debug.deployment.get on the specific node
+      // Use RMB wrapper to call zos.debug.deployment.get on the specific node
       const deployment = `${twinId}:${contractId}`;
-      const result = await client.send(
+      
+      const result = await this.rmbWrapper.request(
         'zos.debug.deployment.get', 
         JSON.stringify({ deployment }), 
         nodeId, 
@@ -133,8 +148,21 @@ class GridClientService {
         throw new Error('No valid response from node');
       }
 
+      // Handle both direct and wrapped response formats
+      const response = result as { deployment?: DeploymentDetail; result?: DeploymentDetail } | DeploymentDetail;
+      
+      // Check if result has a deployment or result property, otherwise use it directly
+      let deploymentData: DeploymentDetail;
+      if ('deployment' in response && response.deployment) {
+        deploymentData = response.deployment;
+      } else if ('result' in response && response.result) {
+        deploymentData = response.result;
+      } else {
+        deploymentData = response as DeploymentDetail;
+      }
+
       return {
-        deployment: result as DeploymentDetail
+        deployment: deploymentData
       };
     } catch (error) {
       console.error('Failed to get deployment detail:', error);
@@ -145,6 +173,7 @@ class GridClientService {
   async resetClient() {
     await this.disconnect();
     this.client = null;
+    this.rmbWrapper = null;
     this.isConnected = false;
   }
 }

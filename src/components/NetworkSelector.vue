@@ -376,10 +376,10 @@ onMounted(async () => {
 
 .url-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
+  gap: 10px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--color-border);
+  align-items: flex-start;
 }
 
 .url-item:last-child {
@@ -389,19 +389,26 @@ onMounted(async () => {
 .url-item .label {
   font-weight: 500;
   color: var(--color-text-dark-2);
+  min-width: 90px;
+  flex-shrink: 0;
 }
 
 .url-item .value {
   color: var(--color-text);
   font-family: monospace;
   font-size: 12px;
+  word-break: break-all;
+  flex: 1;
 }
 
 @media (max-width: 768px) {
   .url-item {
     flex-direction: column;
-    align-items: flex-start;
     gap: 5px;
+  }
+  
+  .url-item .label {
+    min-width: unset;
   }
 }
 </style>

@@ -1,5 +1,5 @@
 export interface Workload {
-  type: 'zdb' | 'network' | 'zmachine' | 'zmount';
+  type: 'zdb' | 'network' | 'zmachine' | 'zmount' | 'ip';
   name: string;
   state: 'ok' | 'failed' | 'degraded' | string;
 }

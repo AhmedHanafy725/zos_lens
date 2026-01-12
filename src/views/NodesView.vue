@@ -139,7 +139,7 @@ const clearFilters = () => {
 };
 
 const selectNode = (node: Node) => {
-  // Set the selected node in RMB service
+  // Set the selected node in RMB service (use twinId for RMB calls)
   rmbService.setSelectedNode(node.twinId);
   
   // Navigate to deployments view
