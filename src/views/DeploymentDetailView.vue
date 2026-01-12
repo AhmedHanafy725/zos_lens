@@ -42,9 +42,9 @@
       <div v-if="history.length > 0" class="history-summary-card">
         <h3>Workload Status Summary</h3>
         <div class="history-summary">
-          <div class="summary-item">
+          <div class="summary-item total">
             <span class="summary-label">Total Workloads</span>
-            <span class="summary-value total">{{ historySummary.total }}</span>
+            <span class="summary-value">{{ historySummary.total }}</span>
           </div>
           <div class="summary-item init">
             <span class="summary-label">Init</span>
@@ -140,11 +140,13 @@
                   </div>
                   <div class="info-item">
                     <span class="label">State:</span>
-                    <span class="value" :class="workload.result.state">{{ workload.result.state }}</span>
+                    <span class="result-state-badge" :class="workload.result.state.toLowerCase()">
+                      {{ workload.result.state }}
+                    </span>
                   </div>
-                  <div v-if="workload.result.message" class="info-item">
+                  <div v-if="workload.result.message" class="result-message-item" :class="workload.result.state.toLowerCase()">
                     <span class="label">Message:</span>
-                    <span class="value">{{ workload.result.message }}</span>
+                    <div class="result-message">{{ workload.result.message }}</div>
                   </div>
                   <div v-if="workload.result.data" class="info-item">
                     <span class="label">Data:</span>
@@ -645,6 +647,62 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
+.result-state-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+  width: fit-content;
+}
+
+.result-state-badge.ok {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.result-state-badge.init {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border: 1px solid var(--color-info);
+}
+
+.result-state-badge.error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+.result-message-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.result-message-item .label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.result-message {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  padding: 0.5rem;
+  background: var(--color-background);
+  border-radius: 4px;
+  border-left: 3px solid var(--color-error);
+  color: var(--color-text);
+}
+
+.result-message-item.error .result-message {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-left-color: #f85149;
+}
+
 /* History Section Styles */
 .history-card {
   background: var(--color-background-soft);
@@ -696,6 +754,10 @@ onMounted(() => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+.summary-item.total {
+  border-color: var(--color-border-hover);
+}
+
 .summary-item.ok {
   border-color: var(--color-success);
 }
@@ -722,8 +784,8 @@ onMounted(() => {
   color: var(--color-heading);
 }
 
-.summary-value.total {
-  color: var(--color-primary);
+.summary-item.total .summary-value {
+  color: var(--color-heading);
 }
 
 .summary-item.ok .summary-value {

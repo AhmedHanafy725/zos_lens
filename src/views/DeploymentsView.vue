@@ -32,13 +32,13 @@
     <div v-else>
       <!-- Summary Statistics -->
       <div class="deployments-summary">
-        <div class="summary-item">
+        <div class="summary-item total">
           <span class="summary-label">Deployments</span>
-          <span class="summary-value total">{{ deploymentSummary.totalDeployments }}</span>
+          <span class="summary-value">{{ deploymentSummary.totalDeployments }}</span>
         </div>
-        <div class="summary-item">
+        <div class="summary-item total">
           <span class="summary-label">Total Workloads</span>
-          <span class="summary-value total">{{ deploymentSummary.totalWorkloads }}</span>
+          <span class="summary-value">{{ deploymentSummary.totalWorkloads }}</span>
         </div>
         <div class="summary-item init">
           <span class="summary-label">Init</span>
@@ -265,6 +265,10 @@ onMounted(() => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+.summary-item.total {
+  border-color: var(--color-border-hover);
+}
+
 .summary-item.ok {
   border-color: var(--color-success);
 }
@@ -295,8 +299,8 @@ onMounted(() => {
   color: var(--color-heading);
 }
 
-.summary-value.total {
-  color: var(--color-primary);
+.summary-item.total .summary-value {
+  color: var(--color-heading);
 }
 
 .summary-item.ok .summary-value {
