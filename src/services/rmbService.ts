@@ -144,6 +144,14 @@ class RMBService {
       }
     } catch (error) {
       console.error('Failed to fetch deployments:', error);
+      
+      // Check if this is an unauthorized error - if so, propagate it
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      if (errorMessage.includes('unauthorized')) {
+        throw error;
+      }
+      
+      // For other errors, return empty array for backward compatibility
       return { deployments: [] };
     }
   }

@@ -21,7 +21,9 @@
       <p>⚠️ Please select a node from the <router-link to="/nodes">Nodes page</router-link> to view its deployments.</p>
     </div>
 
-    <div v-else-if="error" class="error-message">
+    <div v-else-if="error" 
+         class="error-message"
+         :class="{ 'unauthorized-error': error.toLowerCase().includes('unauthorized') }">
       {{ error }}
     </div>
 
@@ -326,6 +328,20 @@ onMounted(() => {
   border-radius: 6px;
   margin-bottom: 1rem;
   border: 1px solid #f85149 !important;
+}
+
+.error-message.unauthorized-error {
+  background: #ffa657 !important;
+  color: #1a1a1a;
+  border: 2px solid #ff8c00 !important;
+  font-weight: 500;
+  padding: 1.25rem;
+}
+
+.error-message.unauthorized-error::before {
+  content: "🔒 ";
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
 }
 
 .warning-message {

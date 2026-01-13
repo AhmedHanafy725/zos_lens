@@ -56,7 +56,9 @@
           Loading health checks...
         </div>
         
-        <div v-else-if="healthError" class="error-message">
+        <div v-else-if="healthError" 
+             class="error-message"
+             :class="{ 'unauthorized-error': healthError.toLowerCase().includes('unauthorized') }">
           {{ healthError }}
         </div>
         
@@ -233,7 +235,9 @@
                 Loading workload info...
               </div>
               
-              <div v-else-if="workloadInfoErrors[workload.name]" class="error-message">
+              <div v-else-if="workloadInfoErrors[workload.name]" 
+                   class="error-message"
+                   :class="{ 'unauthorized-error': workloadInfoErrors[workload.name]?.toLowerCase().includes('unauthorized') }">
                 {{ workloadInfoErrors[workload.name] }}
               </div>
               
@@ -261,7 +265,9 @@
           Loading history...
         </div>
         
-        <div v-else-if="historyError" class="error-message">
+        <div v-else-if="historyError" 
+             class="error-message"
+             :class="{ 'unauthorized-error': historyError.toLowerCase().includes('unauthorized') }">
           {{ historyError }}
         </div>
         
@@ -647,6 +653,20 @@ onMounted(() => {
   border-radius: 6px;
   margin-bottom: 1rem;
   border: 1px solid #f85149 !important;
+}
+
+.error-message.unauthorized-error {
+  background: #ffa657 !important;
+  color: #1a1a1a;
+  border: 2px solid #ff8c00 !important;
+  font-weight: 500;
+  padding: 1.25rem;
+}
+
+.error-message.unauthorized-error::before {
+  content: "🔒 ";
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
 }
 
 .deployment-content {

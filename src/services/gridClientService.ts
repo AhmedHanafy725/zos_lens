@@ -124,6 +124,14 @@ class GridClientService {
       };
     } catch (error) {
       console.error(`Failed to get deployments for node ${nodeId}:`, error);
+      
+      // Check for unauthorized errors
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      if (errorMessage.includes('unauthorized') || errorMessage.includes('permission denied') || errorMessage.includes('forbidden')) {
+        throw new Error('Unauthorized: Only admin users can list deployments on this node. This feature requires admin privileges.');
+      }
+      
+      // For other errors, return empty array to maintain backward compatibility
       return { deployments: [] };
     }
   }
@@ -201,6 +209,13 @@ class GridClientService {
       return response as DeploymentHistoryResponse;
     } catch (error) {
       console.error('Failed to get deployment history:', error);
+      
+      // Check for unauthorized errors
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      if (errorMessage.includes('unauthorized') || errorMessage.includes('permission denied') || errorMessage.includes('forbidden')) {
+        throw new Error('Unauthorized: Only admin users can access deployment history. This feature requires admin privileges on the node.');
+      }
+      
       throw error;
     }
   }
@@ -236,6 +251,13 @@ class GridClientService {
       return response as WorkloadInfoResponse;
     } catch (error) {
       console.error('Failed to get workload info:', error);
+      
+      // Check for unauthorized errors
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      if (errorMessage.includes('unauthorized') || errorMessage.includes('permission denied') || errorMessage.includes('forbidden')) {
+        throw new Error('Unauthorized: Only admin users can access workload info. This feature requires admin privileges on the node.');
+      }
+      
       throw error;
     }
   }
@@ -271,6 +293,13 @@ class GridClientService {
       return response as DeploymentHealthResponse;
     } catch (error) {
       console.error('Failed to get deployment health:', error);
+      
+      // Check for unauthorized errors
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      if (errorMessage.includes('unauthorized') || errorMessage.includes('permission denied') || errorMessage.includes('forbidden')) {
+        throw new Error('Unauthorized: Only admin users can access deployment health. This feature requires admin privileges on the node.');
+      }
+      
       throw error;
     }
   }
