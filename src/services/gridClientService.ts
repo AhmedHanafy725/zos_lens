@@ -19,13 +19,16 @@ class GridClientService {
     try {
       const config = networkConfigService.getCurrentConfig();
       
+      // Generate a random session ID to avoid conflicts
+      const sessionId = `zos_lens_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
       // Initialize RMB Direct Client with all required parameters
       // Client(chainUrl, relayUrl, mnemonics, session, keypairType, retries)
       this.client = new Client(
         config.substrateUrl, 
         config.relayUrl, 
         this.mnemonic,
-        'zos_lens_session',
+        sessionId,
         'sr25519',
         3
       );
