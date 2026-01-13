@@ -60,46 +60,58 @@
         </div>
       </div>
 
-      <!-- Deployments Grid -->
-      <div class="deployments-grid">
-      <div
-        v-for="deployment in deployments"
-        :key="`${deployment.twin_id}-${deployment.contract_id}`"
-        class="deployment-card"
-        @click="navigateToDeployment(deployment)"
-      >
-        <div class="deployment-header">
-          <div class="deployment-id">
-            <span class="label">Twin ID:</span>
-            <span class="value">{{ deployment.twin_id }}</span>
+      <!-- Deployments Grouped by Twin ID -->
+      <div class="deployments-groups">
+        <div 
+          v-for="group in groupedDeployments" 
+          :key="group.twinId"
+          class="twin-group"
+        >
+          <div class="twin-group-header">
+            <h3>Twin ID: {{ group.twinId }}</h3>
+            <div class="twin-group-stats">
+              <span class="stat">{{ group.deployments.length }} deployment(s)</span>
+              <span class="stat">{{ group.totalWorkloads }} workload(s)</span>
+            </div>
           </div>
-          <div class="deployment-id">
-            <span class="label">Contract ID:</span>
-            <span class="value">{{ deployment.contract_id }}</span>
-          </div>
-        </div>
-
-        <div class="deployment-workloads">
-          <div class="workloads-header">
-            <span class="workload-count">{{ deployment.workloads.length }} workload(s)</span>
-          </div>
-          <div class="workload-list">
+          
+          <div class="deployments-grid">
             <div
-              v-for="workload in deployment.workloads"
-              :key="workload.name"
-              class="workload-item"
-              :class="workload.state"
+              v-for="deployment in group.deployments"
+              :key="`${deployment.twin_id}-${deployment.contract_id}`"
+              class="deployment-card"
+              @click="navigateToDeployment(deployment)"
             >
-              <div class="workload-type">{{ workload.type.toUpperCase() }}</div>
-              <div class="workload-name">{{ workload.name }}</div>
-              <div class="workload-state">
-                <span class="status-indicator" :class="workload.state"></span>
-                {{ workload.state }}
+              <div class="deployment-header">
+                <div class="deployment-id">
+                  <span class="label">Contract ID:</span>
+                  <span class="value">{{ deployment.contract_id }}</span>
+                </div>
+              </div>
+
+              <div class="deployment-workloads">
+                <div class="workloads-header">
+                  <span class="workload-count">{{ deployment.workloads.length }} workload(s)</span>
+                </div>
+                <div class="workload-list">
+                  <div
+                    v-for="workload in deployment.workloads"
+                    :key="workload.name"
+                    class="workload-item"
+                    :class="workload.state"
+                  >
+                    <div class="workload-type">{{ workload.type.toUpperCase() }}</div>
+                    <div class="workload-name">{{ workload.name }}</div>
+                    <div class="workload-state">
+                      <span class="status-indicator" :class="workload.state"></span>
+                      {{ workload.state }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   </div>
@@ -119,6 +131,27 @@ const error = ref<string | null>(null);
 const hasMnemonic = computed(() => rmbService.hasMnemonic());
 const hasSelectedNode = computed(() => rmbService.getSelectedNode() !== null);
 const selectedNodeId = computed(() => rmbService.getSelectedNodeId());
+
+// Group deployments by Twin ID
+const groupedDeployments = computed(() => {
+  const groups = new Map<number, Deployment[]>();
+  
+  for (const deployment of deployments.value) {
+    if (!groups.has(deployment.twin_id)) {
+      groups.set(deployment.twin_id, []);
+    }
+    groups.get(deployment.twin_id)?.push(deployment);
+  }
+  
+  // Convert to array and sort by twin ID
+  return Array.from(groups.entries())
+    .map(([twinId, deployments]) => ({
+      twinId,
+      deployments,
+      totalWorkloads: deployments.reduce((sum, d) => sum + d.workloads.length, 0)
+    }))
+    .sort((a, b) => a.twinId - b.twinId);
+});
 
 // Calculate summary statistics for all deployments
 const deploymentSummary = computed(() => {
@@ -363,6 +396,49 @@ onMounted(() => {
   color: var(--color-text);
   padding: 3rem;
   font-size: 1.1rem;
+}
+
+.deployments-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.twin-group {
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.twin-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.twin-group-header h3 {
+  color: var(--color-heading);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.twin-group-stats {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.twin-group-stats .stat {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--color-background-soft);
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
 }
 
 .deployments-grid {
