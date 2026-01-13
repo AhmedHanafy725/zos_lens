@@ -15,7 +15,7 @@ export function testMnemonicValidation(mnemonic: string) {
 }
 
 export function checkWordlistAvailability() {
-  console.log('English wordlist loaded:', englishWordlist ? `${englishWordlist.length} words` : 'Missing');
+  return englishWordlist ? englishWordlist.length : 0;
 }
 
 // Export the wordlist for use in other modules

@@ -18,10 +18,6 @@ const formattedJson = computed(() => {
   try {
     const jsonString = JSON.stringify(props.data, null, props.indent);
     const highlighted = highlightJson(jsonString);
-    // Debug: log first 300 chars to console
-    if (highlighted.length > 0) {
-      console.log('Highlighted output:', highlighted.substring(0, 300));
-    }
     return highlighted;
   } catch (error) {
     return '<span class="json-error">Invalid JSON: ' + error + '</span>';

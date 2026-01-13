@@ -54,14 +54,6 @@ class RMBService {
         }
       }
       
-      console.log('RMB service initialized');
-      if (!this.mnemonic) {
-        console.log('No mnemonic provided. Please configure mnemonic to make RMB calls.');
-      } else if (!this.selectedNodeId) {
-        console.log('No node selected. Please select a node to fetch deployments.');
-      } else {
-        console.log('Ready to fetch deployment data from node', this.selectedNodeId);
-      }
     } catch (error) {
       console.error('Failed to initialize RMB service:', error);
       throw error;
@@ -122,12 +114,10 @@ class RMBService {
     try {
       // Check if we have mnemonic and selected node
       if (!this.mnemonic) {
-        console.warn('No mnemonic provided. Cannot fetch deployments via RMB.');
         return { deployments: [] };
       }
 
       if (!this.selectedTwinId) {
-        console.warn('No twin selected. Cannot fetch deployments via RMB.');
         return { deployments: [] };
       }
 
@@ -137,7 +127,6 @@ class RMBService {
         return result;
       } else {
         // Try to initialize GridClient if not connected
-        console.log('Initializing RMB client...');
         await gridClientService.initialize(this.mnemonic);
         const result = await gridClientService.getNodeDeployments(this.selectedTwinId);
         return result;

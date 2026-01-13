@@ -39,8 +39,6 @@ class GridClientService {
       
       // Initialize RMB wrapper
       this.rmbWrapper = new RMBWrapper(this.client);
-      
-      console.log('RMB Client connected successfully');
     } catch (error) {
       console.error('Failed to initialize RMB Client:', error);
       this.isConnected = false;
@@ -69,7 +67,6 @@ class GridClientService {
         this.isConnected = false;
         this.rmbWrapper = null;
         this.client = null;
-        console.log('RMB Client disconnected');
       } catch (error) {
         console.error('Failed to disconnect RMB Client:', error);
       }
