@@ -76,3 +76,19 @@ export interface DeploymentHistoryResponse {
   deployment: string;
   history: DeploymentHistoryEntry[];
 }
+
+export interface WorkloadInfo {
+  workload_id: string;
+  type: string;
+  name: string;
+  info: Record<string, unknown>;
+  logs: string;
+}
+
+export interface WorkloadInfoResponse {
+  workload_id: string;
+  type: string;
+  name: string;
+  info: Record<string, unknown>;
+  logs: string;
+}

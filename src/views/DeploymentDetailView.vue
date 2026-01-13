@@ -114,9 +114,18 @@
                 <span class="workload-type">{{ workload.type.toUpperCase() }}</span>
                 <span class="workload-name">{{ workload.name }}</span>
               </div>
-              <div class="workload-status" :class="workload.result.state">
-                <span class="status-indicator" :class="workload.result.state"></span>
-                {{ workload.result.state }}
+              <div class="workload-actions">
+                <button 
+                  @click="toggleWorkloadInfo(workload.name)" 
+                  class="info-btn"
+                  :disabled="loadingWorkloadInfo[workload.name]"
+                >
+                  {{ workloadInfoVisible[workload.name] ? 'Hide Info' : 'Show Info' }}
+                </button>
+                <div class="workload-status" :class="workload.result.state">
+                  <span class="status-indicator" :class="workload.result.state"></span>
+                  {{ workload.result.state }}
+                </div>
               </div>
             </div>
             
@@ -152,6 +161,29 @@
                     <span class="label">Data:</span>
                     <JsonFormatter :data="workload.result.data" />
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Workload Info Section -->
+            <div v-if="workloadInfoVisible[workload.name]" class="workload-info-section">
+              <div v-if="loadingWorkloadInfo[workload.name]" class="loading-message">
+                Loading workload info...
+              </div>
+              
+              <div v-else-if="workloadInfoErrors[workload.name]" class="error-message">
+                {{ workloadInfoErrors[workload.name] }}
+              </div>
+              
+              <div v-else-if="workloadInfoData[workload.name]" class="workload-info-content">
+                <div class="workload-section">
+                  <h4>Workload Information</h4>
+                  <JsonFormatter :data="workloadInfoData[workload.name]?.info || {}" />
+                </div>
+                
+                <div v-if="workloadInfoData[workload.name]?.logs" class="workload-section">
+                  <h4>Logs</h4>
+                  <pre class="workload-logs">{{ cleanLogs(workloadInfoData[workload.name]?.logs || '') }}</pre>
                 </div>
               </div>
             </div>
@@ -225,7 +257,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { rmbService } from '@/services/rmbService';
 import JsonFormatter from '@/components/JsonFormatter.vue';
-import type { DeploymentDetail, DeploymentHistoryEntry } from '@/types/deployment';
+import type { DeploymentDetail, DeploymentHistoryEntry, WorkloadInfoResponse } from '@/types/deployment';
 
 interface Props {
   twinId: string;
@@ -245,6 +277,10 @@ const deployment = ref<DeploymentDetail | null>(null);
 const history = ref<DeploymentHistoryEntry[]>([]);
 const loading = ref(false);
 const loadingHistory = ref(false);
+const workloadInfoVisible = ref<Record<string, boolean>>({});
+const loadingWorkloadInfo = ref<Record<string, boolean>>({});
+const workloadInfoData = ref<Record<string, WorkloadInfoResponse>>({});
+const workloadInfoErrors = ref<Record<string, string>>({});
 const error = ref<string | null>(null);
 const historyError = ref<string | null>(null);
 
@@ -395,6 +431,51 @@ const parseMetadata = (metadata: string) => {
     // If parsing fails, it's a plain string - return it as an object
     return { text: metadata };
   }
+};
+
+const toggleWorkloadInfo = async (workloadName: string) => {
+  // Toggle visibility
+  if (workloadInfoVisible.value[workloadName]) {
+    workloadInfoVisible.value[workloadName] = false;
+    return;
+  }
+
+  // If not already loaded, fetch the info
+  if (!workloadInfoData.value[workloadName]) {
+    await fetchWorkloadInfo(workloadName);
+  }
+
+  workloadInfoVisible.value[workloadName] = true;
+};
+
+const fetchWorkloadInfo = async (workloadName: string) => {
+  loadingWorkloadInfo.value[workloadName] = true;
+  workloadInfoErrors.value[workloadName] = '';
+
+  try {
+    const info = await rmbService.getWorkloadInfo(
+      parseInt(props.twinId),
+      parseInt(props.contractId),
+      workloadName
+    );
+
+    workloadInfoData.value[workloadName] = info;
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Failed to load workload info';
+    workloadInfoErrors.value[workloadName] = errorMessage;
+    console.error('Error loading workload info:', err);
+  } finally {
+    loadingWorkloadInfo.value[workloadName] = false;
+  }
+};
+
+const cleanLogs = (logs: string): string => {
+  if (!logs) return '';
+  
+  // Simply remove all null bytes
+  const cleaned = logs.replace(/\x00/g, '');
+  
+  return cleaned.trim();
 };
 
 onMounted(() => {
@@ -612,6 +693,33 @@ onMounted(() => {
   color: var(--color-heading);
 }
 
+.workload-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.info-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.info-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.info-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .workload-status {
   display: flex;
   align-items: center;
@@ -708,6 +816,34 @@ onMounted(() => {
   background: var(--color-error-bg);
   color: var(--color-error);
   border-left-color: #f85149;
+}
+
+.workload-info-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.workload-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.workload-logs {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 /* History Section Styles */
