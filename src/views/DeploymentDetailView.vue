@@ -11,7 +11,9 @@
       </button>
     </div>
 
-    <div v-if="error" class="error-message">
+    <div v-if="error" 
+         class="error-message"
+         :class="{ 'unauthorized-error': error.toLowerCase().includes('unauthorized') }">
       {{ error }}
     </div>
 

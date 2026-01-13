@@ -174,6 +174,13 @@ class GridClientService {
       };
     } catch (error) {
       console.error('Failed to get deployment detail:', error);
+      
+      // Check for unauthorized errors
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+      if (errorMessage.includes('unauthorized') || errorMessage.includes('permission denied') || errorMessage.includes('forbidden')) {
+        throw new Error('Unauthorized: Only admin users can access deployment details. This feature requires admin privileges on the node.');
+      }
+      
       throw error;
     }
   }
