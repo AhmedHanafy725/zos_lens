@@ -1,7 +1,7 @@
 import { Client } from '@threefold/rmb_direct_client';
 import { networkConfigService } from './networkConfig';
 import { RMBWrapper } from './rmbWrapper';
-import type { DeploymentListResponse, DeploymentDetailResponse, DeploymentDetail, DeploymentHistoryResponse, WorkloadInfoResponse } from '@/types/deployment';
+import type { DeploymentListResponse, DeploymentDetailResponse, DeploymentDetail, DeploymentHistoryResponse, WorkloadInfoResponse, DeploymentHealthResponse } from '@/types/deployment';
 
 class GridClientService {
   private client: Client | null = null;
@@ -236,6 +236,41 @@ class GridClientService {
       return response as WorkloadInfoResponse;
     } catch (error) {
       console.error('Failed to get workload info:', error);
+      throw error;
+    }
+  }
+
+  async getDeploymentHealth(nodeId: number, twinId: number, contractId: number): Promise<DeploymentHealthResponse> {
+    try {
+      if (!this.rmbWrapper) {
+        throw new Error('RMB Wrapper is not initialized');
+      }
+      
+      // Use RMB wrapper to call zos.debug.deployment.health on the specific node
+      const deployment = `${twinId}:${contractId}`;
+      
+      const result = await this.rmbWrapper.request(
+        'zos.debug.deployment.health', 
+        JSON.stringify({ deployment }), 
+        nodeId, 
+        30
+      );
+      
+      if (!result || typeof result === 'string') {
+        throw new Error('No valid response from node');
+      }
+
+      // Handle both direct and wrapped response formats
+      const response = result as DeploymentHealthResponse | { result?: DeploymentHealthResponse };
+      
+      // Check if result has a result property, otherwise use it directly
+      if ('result' in response && response.result) {
+        return response.result;
+      }
+      
+      return response as DeploymentHealthResponse;
+    } catch (error) {
+      console.error('Failed to get deployment health:', error);
       throw error;
     }
   }

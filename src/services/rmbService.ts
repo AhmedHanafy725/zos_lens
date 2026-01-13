@@ -1,4 +1,4 @@
-import type { DeploymentListResponse, DeploymentDetailResponse, DeploymentHistoryResponse, Deployment, Workload, WorkloadInfoResponse } from '@/types/deployment';
+import type { DeploymentListResponse, DeploymentDetailResponse, DeploymentHistoryResponse, Deployment, Workload, WorkloadInfoResponse, DeploymentHealthResponse } from '@/types/deployment';
 import { networkConfigService } from './networkConfig';
 import { gridClientService } from './gridClientService';
 
@@ -225,6 +225,33 @@ class RMBService {
       }
     } catch (error) {
       console.error('Failed to fetch workload info:', error);
+      throw error;
+    }
+  }
+
+  async getDeploymentHealth(twinId: number, contractId: number): Promise<DeploymentHealthResponse> {
+    try {
+      // Check if we have mnemonic and selected node
+      if (!this.mnemonic) {
+        throw new Error('Mnemonic is required to fetch deployment health');
+      }
+
+      if (!this.selectedTwinId) {
+        throw new Error('No twin selected. Please select a node first.');
+      }
+
+      // Use GridClient to make RMB call (RMB uses twin ID)
+      if (gridClientService.isClientConnected()) {
+        const result = await gridClientService.getDeploymentHealth(this.selectedTwinId, twinId, contractId);
+        return result;
+      } else {
+        // Try to initialize GridClient if not connected
+        await gridClientService.initialize(this.mnemonic);
+        const result = await gridClientService.getDeploymentHealth(this.selectedTwinId, twinId, contractId);
+        return result;
+      }
+    } catch (error) {
+      console.error('Failed to fetch deployment health:', error);
       throw error;
     }
   }

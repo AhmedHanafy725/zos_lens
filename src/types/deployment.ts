@@ -92,3 +92,24 @@ export interface WorkloadInfoResponse {
   info: Record<string, unknown>;
   logs: string;
 }
+
+export interface HealthCheck {
+  name: string;
+  ok: boolean;
+  message: string;
+  evidence: Record<string, unknown>;
+}
+
+export interface WorkloadHealth {
+  workload_id: string;
+  type: string;
+  name: string;
+  status: 'healthy' | 'unhealthy';
+  checks: HealthCheck[];
+}
+
+export interface DeploymentHealthResponse {
+  twin_id: number;
+  contract_id: number;
+  workloads: WorkloadHealth[];
+}

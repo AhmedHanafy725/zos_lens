@@ -17,7 +17,17 @@
 
     <div v-if="deployment" class="deployment-content">
       <div class="deployment-info-card">
-        <h3>General Information</h3>
+        <div class="card-header">
+          <h3>General Information</h3>
+          <button 
+            @click="toggleHealthChecks" 
+            class="health-btn"
+            :disabled="loadingHealth"
+          >
+            <span v-if="loadingHealth">Loading Health...</span>
+            <span v-else>{{ healthVisible ? 'Hide Health' : 'Show Health' }}</span>
+          </button>
+        </div>
         <div class="info-grid">
           <div class="info-item">
             <span class="label">Twin ID:</span>
@@ -34,6 +44,58 @@
           <div class="info-item">
             <span class="label">Expiration:</span>
             <span class="value">{{ formatExpiration(deployment.expiration) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deployment Health Section -->
+      <div v-if="healthVisible" class="health-card">
+        <h3>Deployment Health</h3>
+        
+        <div v-if="loadingHealth" class="loading-message">
+          Loading health checks...
+        </div>
+        
+        <div v-else-if="healthError" class="error-message">
+          {{ healthError }}
+        </div>
+        
+        <div v-else-if="healthData" class="health-content">
+          <div 
+            v-for="workload in healthData.workloads" 
+            :key="workload.workload_id"
+            class="workload-health-card"
+            :class="workload.status"
+          >
+            <div class="workload-health-header">
+              <div class="workload-health-title">
+                <span class="workload-type">{{ workload.type.toUpperCase() }}</span>
+                <span class="workload-name">{{ workload.name }}</span>
+              </div>
+              <span class="health-status" :class="workload.status">
+                {{ workload.status }}
+              </span>
+            </div>
+            
+            <div class="health-checks">
+              <div 
+                v-for="(check, index) in workload.checks" 
+                :key="index"
+                class="health-check"
+                :class="{ ok: check.ok, failed: !check.ok }"
+              >
+                <div class="check-header">
+                  <span class="check-icon" :class="{ ok: check.ok, failed: !check.ok }">
+                    {{ check.ok ? '✓' : '✗' }}
+                  </span>
+                  <span class="check-name">{{ check.name }}</span>
+                </div>
+                <div class="check-message">{{ check.message }}</div>
+                <div v-if="check.evidence && Object.keys(check.evidence).length > 0" class="check-evidence">
+                  <JsonFormatter :data="check.evidence" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -257,7 +319,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { rmbService } from '@/services/rmbService';
 import JsonFormatter from '@/components/JsonFormatter.vue';
-import type { DeploymentDetail, DeploymentHistoryEntry, WorkloadInfoResponse } from '@/types/deployment';
+import type { DeploymentDetail, DeploymentHistoryEntry, WorkloadInfoResponse, DeploymentHealthResponse } from '@/types/deployment';
 
 interface Props {
   twinId: string;
@@ -283,6 +345,10 @@ const workloadInfoData = ref<Record<string, WorkloadInfoResponse>>({});
 const workloadInfoErrors = ref<Record<string, string>>({});
 const error = ref<string | null>(null);
 const historyError = ref<string | null>(null);
+const healthVisible = ref(false);
+const loadingHealth = ref(false);
+const healthData = ref<DeploymentHealthResponse | null>(null);
+const healthError = ref<string | null>(null);
 
 // Group history entries by workload name
 const groupedHistory = computed<GroupedHistory[]>(() => {
@@ -478,6 +544,41 @@ const cleanLogs = (logs: string): string => {
   return cleaned.trim();
 };
 
+const toggleHealthChecks = async () => {
+  // Toggle visibility
+  if (healthVisible.value) {
+    healthVisible.value = false;
+    return;
+  }
+
+  // If not already loaded, fetch the health data
+  if (!healthData.value) {
+    await fetchDeploymentHealth();
+  }
+
+  healthVisible.value = true;
+};
+
+const fetchDeploymentHealth = async () => {
+  loadingHealth.value = true;
+  healthError.value = null;
+
+  try {
+    const health = await rmbService.getDeploymentHealth(
+      parseInt(props.twinId),
+      parseInt(props.contractId)
+    );
+
+    healthData.value = health;
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Failed to load deployment health';
+    healthError.value = errorMessage;
+    console.error('Error loading deployment health:', err);
+  } finally {
+    loadingHealth.value = false;
+  }
+};
+
 onMounted(() => {
   loadDeployment();
   loadHistory();
@@ -558,11 +659,40 @@ onMounted(() => {
 .deployment-metadata-card,
 .deployment-signature-card,
 .workloads-card,
-.history-summary-card {
+.history-summary-card,
+.health-card {
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.health-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.health-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.health-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .deployment-info-card h3,
@@ -844,6 +974,130 @@ onMounted(() => {
   word-break: break-word;
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* Health Check Styles */
+.health-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.workload-health-card {
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.workload-health-card.healthy {
+  border-left: 4px solid var(--color-success);
+}
+
+.workload-health-card.unhealthy {
+  border-left: 4px solid var(--color-error);
+}
+
+.workload-health-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workload-health-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.health-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.health-status.healthy {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.health-status.unhealthy {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+.health-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.health-check {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.health-check.ok {
+  border-left: 3px solid var(--color-success);
+}
+
+.health-check.failed {
+  border-left: 3px solid var(--color-error);
+}
+
+.check-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.check-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.check-icon.ok {
+  background: var(--color-success);
+  color: white;
+}
+
+.check-icon.failed {
+  background: var(--color-error);
+  color: white;
+}
+
+.check-name {
+  font-weight: 600;
+  color: var(--color-heading);
+  font-size: 0.875rem;
+}
+
+.check-message {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.check-evidence {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
 }
 
 /* History Section Styles */
